@@ -54,15 +54,6 @@ operations = {
 	quo = function(x, y) return x / y end,
 	mod = function(x, y) return x % y end,
 	pow = function(x, y) return math.pow(x, y) end,
-	fact = function(n)
-		local acc = 1
-		local val = n
-		while val > 1 do
-			acc = acc * val
-			val = val - 1
-		end
-		return f
-	end
 }
 
 local function fold(lst)
