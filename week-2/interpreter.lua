@@ -68,6 +68,30 @@ M.run = function(code, stack)
 			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = math.pow(stack[top - 1], stack[top])
 			top = top - 1
+		elseif code[pc] == "gte" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] >= stack[top] and 1 or 0
+			top = top - 1
+		elseif code[pc] == "lte" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] <= stack[top] and 1 or 0
+			top = top - 1
+		elseif code[pc] == "neq" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] ~= stack[top] and 1 or 0
+			top = top - 1
+		elseif code[pc] == "eq" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] == stack[top] and 1 or 0
+			top = top - 1
+		elseif code[pc] == "gt" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] > stack[top] and 1 or 0
+			top = top - 1
+		elseif code[pc] == "lt" then
+			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+			stack[top - 1] = stack[top - 1] < stack[top] and 1 or 0
+			top = top - 1
 		else
 			print(f "error: unknown instruction {code[pc]}")
 		end

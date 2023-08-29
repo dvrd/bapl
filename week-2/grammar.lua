@@ -1,4 +1,5 @@
 local lpeg = require "lpeg"
+local utils = require "utils.core"
 
 local loc = lpeg.locale()
 local p = lpeg.P
@@ -17,6 +18,7 @@ local function tonode(t)
 end
 
 local function fold(lst)
+	utils.pt(lst)
 	local ast = lst[1]
 	for i = 2, #lst, 2 do
 		ast = { tag = "binop", e1 = ast, op = lst[i], e2 = lst[i + 1] }
@@ -41,21 +43,30 @@ local mul = p "*" / tonode "mul" * space
 local quo = p "/" / tonode "quo" * space
 local mod = p "%" / tonode "mod" * space
 local pow = p "^" / tonode "pow" * space
+local gte = p ">=" / tonode "gte" * space
+local lte = p "<=" / tonode "lte" * space
+local neq = p "!=" / tonode "neq" * space
+local gt = p ">" / tonode "gt" * space
+local lt = p "<" / tonode "lt" * space
+local eq = p "==" / tonode "eq" * space
 
 local op_add = add + sub
 local op_mul = mul + quo + mod
 local op_exp = pow
+local op_cmp = gte + lte + gt + lt + neq + eq
 
 local exponent = v "exponent"
 local term = v "term"
 local expression = v "expression"
+local cmp = v "cmp"
 local factor = v "factor"
 
-local grammar = p { "expression",
+local grammar = p { "cmp",
 	exponent   = space * ct(factor * (op_exp * factor) ^ 0) / fold,
 	term       = space * ct(exponent * (op_mul * exponent) ^ 0) / fold,
 	expression = space * ct(term * (op_add * term) ^ 0) / fold,
-	factor     = space * numeral + (OP * expression * CP),
+	cmp        = space * ct(expression * (op_cmp * expression) ^ 0) / fold,
+	factor     = space * numeral + (OP * cmp * CP),
 }
 
 return space * grammar * -1
