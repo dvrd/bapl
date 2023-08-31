@@ -1,5 +1,4 @@
 local i = require "week-2.interpreter"
--- local f = require "F"
 
 local function check(case, expect)
 	io.write("CASE: " .. case)

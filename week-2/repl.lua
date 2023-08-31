@@ -1,3 +1,5 @@
+#!/usr/bin/env lua
+
 local i = require "week-2.interpreter"
 local utils = require "utils.core"
 
