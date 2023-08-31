@@ -1,5 +1,4 @@
 local lpeg = require "lpeg"
-local utils = require "utils.core"
 
 local loc = lpeg.locale()
 local p = lpeg.P
@@ -18,7 +17,6 @@ local function tonode(t)
 end
 
 local function fold(lst)
-	utils.pt(lst)
 	local ast = lst[1]
 	for i = 2, #lst, 2 do
 		ast = { tag = "binop", e1 = ast, op = lst[i], e2 = lst[i + 1] }
@@ -31,16 +29,22 @@ local OP = "(" * space
 local CP = ")" * space
 
 local sign = p "-" ^ -1
+local digit = loc.digit ^ 1
+
 local hex_prefix = "0" * s "xX"
 local hex_digit = r("09", "af", "AF")
 local hex = hex_prefix * hex_digit * hex_digit ^ -5 * -hex_digit
-local digit = hex + loc.digit ^ 1
-local numeral = (sign * digit / tonode "number") * space
+
+local dot = p "."
+local decimal = (digit * dot * digit) + (digit * dot) + (dot * digit)
+
+local scientific = (decimal + digit) * s "eE" * (p "-" ^ -1) * digit
+local numeral = (sign * (hex + scientific + decimal + digit) / tonode "number") * space
 
 local add = p "+" / tonode "add" * space
 local sub = p "-" / tonode "sub" * space
 local mul = p "*" / tonode "mul" * space
-local quo = p "/" / tonode "quo" * space
+local div = p "/" / tonode "div" * space
 local mod = p "%" / tonode "mod" * space
 local pow = p "^" / tonode "pow" * space
 local gte = p ">=" / tonode "gte" * space
@@ -51,7 +55,7 @@ local lt = p "<" / tonode "lt" * space
 local eq = p "==" / tonode "eq" * space
 
 local op_add = add + sub
-local op_mul = mul + quo + mod
+local op_mul = mul + div + mod
 local op_exp = pow
 local op_cmp = gte + lte + gt + lt + neq + eq
 

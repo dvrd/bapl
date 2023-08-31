@@ -1,5 +1,5 @@
 local inspect = require "inspect"
-local f = require "F"
+local utils = require "utils.core"
 local grammar = require "week-2.grammar"
 
 local M = {
@@ -25,7 +25,7 @@ local function codeExp(state, ast)
 		addCode(state, ast.op.tag)
 	elseif ast.tag == "ident" then
 	else
-		error(f "error: invalid tree {ast}")
+		utils.ef "error: invalid tree {ast}"
 	end
 end
 
@@ -35,65 +35,111 @@ M.compile = function(ast)
 	return state.code
 end
 
-M.run = function(code, stack)
+local function dumpStack(stack, top)
+	for i = 1, top do
+		io.stderr:write(stack[i])
+
+		if i ~= top then
+			io.stderr:write(" ")
+		end
+	end
+end
+
+local function trace(stack, top)
+	return function(op, val)
+		io.stderr:write("[TRACE]\t")
+
+		if val then
+			io.stderr:write(op .. " " .. val .. "\t\t--> ")
+		else
+			io.stderr:write(op .. "\t\t--> ")
+		end
+
+		dumpStack(stack, top)
+		io.stderr:write("\n")
+	end
+end
+
+
+M.run = function(code, stack, flags)
 	local pc = 1
 	local top = 0
+
+	if flags["trace"] then
+		trace = trace(stack, top)
+	else
+		trace = function() end
+	end
+
 	while pc <= #code do
 		if code[pc] == "push" then
-			print(f "debug: {code[pc]} -> {code[pc + 1]}")
 			pc = pc + 1
 			top = top + 1
 			stack[top] = code[pc]
+
+			trace("push", code[pc])
 		elseif code[pc] == "add" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] + stack[top]
 			top = top - 1
+
+			trace("add")
 		elseif code[pc] == "sub" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] - stack[top]
 			top = top - 1
+
+			trace("sub")
 		elseif code[pc] == "mul" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] * stack[top]
 			top = top - 1
-		elseif code[pc] == "quo" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
+
+			trace("mul")
+		elseif code[pc] == "div" then
 			stack[top - 1] = stack[top - 1] / stack[top]
 			top = top - 1
+
+			trace("div")
 		elseif code[pc] == "mod" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] % stack[top]
 			top = top - 1
+
+			trace("mod")
 		elseif code[pc] == "pow" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = math.pow(stack[top - 1], stack[top])
 			top = top - 1
+
+			trace("pow")
 		elseif code[pc] == "gte" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] >= stack[top] and 1 or 0
 			top = top - 1
+
+			trace("gte")
 		elseif code[pc] == "lte" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] <= stack[top] and 1 or 0
 			top = top - 1
+
+			trace("lte")
 		elseif code[pc] == "neq" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] ~= stack[top] and 1 or 0
 			top = top - 1
+
+			trace("neq")
 		elseif code[pc] == "eq" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] == stack[top] and 1 or 0
 			top = top - 1
+
+			trace("eq")
 		elseif code[pc] == "gt" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] > stack[top] and 1 or 0
 			top = top - 1
+
+			trace("gt")
 		elseif code[pc] == "lt" then
-			print(f "debug: {code[pc]} -> {stack[top - 1]} {stack[top]}")
 			stack[top - 1] = stack[top - 1] < stack[top] and 1 or 0
 			top = top - 1
+
+			trace("lt")
 		else
-			print(f "error: unknown instruction {code[pc]}")
+			utils.pf "error: unknown instruction {code[pc]}"
 		end
 		pc = pc + 1
 	end
