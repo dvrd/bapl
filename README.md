@@ -24,3 +24,25 @@ It now allows for basic arithmetic and comparison.
 
 # To enable tracing just pass --trace as a flag
 ```
+
+## Week 3 - Assignments
+This week I started with trying to build a PEG parser in Odin, so far without much success so far, you 
+can find it at [my repo](https://github.com/dvrd/pegasus) if you are curious. I reorganized the repository to 
+make the language utility executable. I updated my `.zshrc` with the path to the directory and renamed `repl.lua` to `bapl`.
+
+Now you can execute everything like this
+
+```
+# This will execute a file with the compiler
+bapl -f <somefile>
+
+# You can run the repl by executing it without arguments
+bapl
+
+# Or execute an argument with the `e` flag
+bapl -e "3 + 3" # returns 6 like before
+
+# To enable tracing just pass --trace as a flag
+```
+
+

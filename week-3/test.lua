@@ -1,4 +1,4 @@
-local i = require "week-2.interpreter"
+local i = require "week-3.interpreter"
 
 local function check(case, expect)
 	io.write("CASE: " .. case)

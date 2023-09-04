@@ -1,6 +1,6 @@
 #!/usr/bin/env lua
 
-local i = require "week-2.interpreter"
+local i = require "week-3.interpreter"
 local utils = require "utils.core"
 
 local flags = utils.parseArgs(arg)

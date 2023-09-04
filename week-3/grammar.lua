@@ -5,7 +5,6 @@ local p = lpeg.P
 local s = lpeg.S
 local r = lpeg.R
 local ct = lpeg.Ct
-local c = lpeg.C
 local v = lpeg.V
 
 local function tonode(t)
@@ -30,8 +29,6 @@ local OP = "(" * space
 local CP = ")" * space
 local ID = loc.alpha * loc.alnum ^ 0
 local var = ID / tonode "variable" * space
-
-local hex_digit = r("09", "af", "AF")
 
 local sign = p "-" ^ -1
 local digit = loc.digit ^ 1
