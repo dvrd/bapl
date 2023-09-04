@@ -10,7 +10,7 @@ local function pf(t)
 end
 
 local function ef(t)
-	error(f(t))
+	print(f(t))
 end
 
 local function help(exitCode)

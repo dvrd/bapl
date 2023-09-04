@@ -1,4 +1,5 @@
 local lpeg = require "lpeg"
+local utils = require "utils.core"
 
 local loc = lpeg.locale()
 local p = lpeg.P
@@ -8,11 +9,17 @@ local ct = lpeg.Ct
 local v = lpeg.V
 
 local function tonode(t)
-	return function(val)
-		return {
-			tag = t,
-			val = t == "number" and tonumber(val) or val,
-		}
+	return function(data, more)
+		local node = { tag = t }
+		if t == "number" then
+			node.val = tonumber(data)
+		elseif t == "assign" then
+			node.val = data.val
+			node.exp = more
+		else
+			node.val = data
+		end
+		return node
 	end
 end
 
@@ -27,8 +34,9 @@ end
 local space = loc.space ^ 0
 local OP = "(" * space
 local CP = ")" * space
-local ID = loc.alpha * loc.alnum ^ 0
+local ID = ("_" + loc.alpha) * (loc.alnum + "_") ^ 0
 local var = ID / tonode "variable" * space
+local assign = "=" * space
 
 local sign = p "-" ^ -1
 local digit = loc.digit ^ 1
@@ -67,15 +75,20 @@ local add = v "add"
 local sub = v "sub"
 local cmp = v "cmp"
 local atom = v "atom"
+local stat = v "stat"
+local expr = v "expr"
 
-local grammar = p { "cmp",
-	pow  = space * ct(atom * (op_pow * atom) ^ 0) / fold,
-	mul  = space * ct(pow * (op_mul * pow) ^ 0) / fold,
-	div  = space * ct(mul * (op_quo * mul) ^ 0) / fold,
-	add  = space * ct(div * (op_add * div) ^ 0) / fold,
-	sub  = space * ct(add * (op_sub * add) ^ 0) / fold,
-	cmp  = space * ct(sub * (op_cmp * sub) ^ 0) / fold,
-	atom = space * numeral + (OP * cmp * CP) + var,
+local grammar = p { "base",
+	base = stat + expr,
+	stat = var * assign * cmp / tonode "assign",
+	expr = cmp,
+	atom = var + numeral + (OP * expr * CP),
+	pow  = ct(atom * (op_pow * atom) ^ 0) / fold,
+	mul  = ct(pow * (op_mul * pow) ^ 0) / fold,
+	div  = ct(mul * (op_quo * mul) ^ 0) / fold,
+	add  = ct(div * (op_add * div) ^ 0) / fold,
+	sub  = ct(add * (op_sub * add) ^ 0) / fold,
+	cmp  = ct(sub * (op_cmp * sub) ^ 0) / fold,
 }
 
 return space * grammar * -1

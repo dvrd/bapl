@@ -5,13 +5,13 @@ local utils = require "utils.core"
 
 local flags = utils.parseArgs(arg)
 
+local mem = {}
 local function exec(input)
 	local ast = i.parse(input)
 
 	if ast ~= nil then
 		local code = i.compile(ast)
 		local stack = {}
-		local mem = { x = 1, y = 2 }
 		local result = i.run(code, mem, stack, flags)
 		print(result[1])
 	else
