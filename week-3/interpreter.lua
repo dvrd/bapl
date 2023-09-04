@@ -1,6 +1,6 @@
 local inspect = require "inspect"
 local utils = require "utils.core"
-local grammar = require "week-2.grammar"
+local grammar = require "week-3.grammar"
 
 local M = {
 	inspect = inspect
@@ -23,7 +23,9 @@ local function codeExp(state, ast)
 		codeExp(state, ast.e1)
 		codeExp(state, ast.e2)
 		addCode(state, ast.op.tag)
-	elseif ast.tag == "ident" then
+	elseif ast.tag == "variable" then
+		addCode(state, "load")
+		addCode(state, ast.val)
 	else
 		utils.ef "error: invalid tree {ast}"
 	end
@@ -40,107 +42,87 @@ local function dumpStack(stack, top)
 		io.stderr:write(stack[i])
 
 		if i ~= top then
-			io.stderr:write(" ")
+			io.stderr:write(", ")
 		end
 	end
 end
 
-local function trace(stack, top)
-	return function(op, val)
+local function trace(stack, top, op, val, flags)
+	if flags and flags["trace"] then
 		io.stderr:write("[TRACE]\t")
 
 		if val then
-			io.stderr:write(op .. " " .. val .. "\t\t--> ")
+			io.stderr:write(op .. " " .. val .. " --> stack [")
 		else
-			io.stderr:write(op .. "\t\t--> ")
+			io.stderr:write(op .. " --> stack ")
 		end
 
 		dumpStack(stack, top)
-		io.stderr:write("\n")
+		io.stderr:write("]\n")
 	end
 end
 
+local binops = {
+	["add"] = function(x, y) return x + y end,
+	["sub"] = function(x, y) return x - y end,
+	["mul"] = function(x, y) return x * y end,
+	["div"] = function(x, y) return x / y end,
+	["mod"] = function(x, y) return x % y end,
+	["pow"] = function(x, y) return math.pow(x, y) end,
+	["gte"] = function(x, y) return x >= y and 1 or 0 end,
+	["lte"] = function(x, y) return x <= y and 1 or 0 end,
+	["neq"] = function(x, y) return x ~= y and 1 or 0 end,
+	["eq"]  = function(x, y) return x == y and 1 or 0 end,
+	["gt"]  = function(x, y) return x > y and 1 or 0 end,
+	["lt"]  = function(x, y) return x < y and 1 or 0 end
+}
 
-M.run = function(code, stack, flags)
+M.run = function(code, mem, stack, flags)
 	local pc = 1
 	local top = 0
+	local instruction = nil
+	local trace_data = nil
 
-	if flags["trace"] then
-		trace = trace(stack, top)
-	else
-		trace = function() end
-	end
-
-	while pc <= #code do
-		if code[pc] == "push" then
+	local dispatch = {
+		["ret"] = function()
+			return true -- signal to end loop
+		end,
+		["push"] = function()
 			pc = pc + 1
 			top = top + 1
 			stack[top] = code[pc]
-
-			trace("push", code[pc])
-		elseif code[pc] == "add" then
-			stack[top - 1] = stack[top - 1] + stack[top]
+		end,
+		["load"] = function()
+			pc = pc + 1
+			local id = code[pc]
+			top = top + 1
+			stack[top] = mem[id]
+		end,
+		["store"] = function()
+			pc = pc + 1
+			local id = code[pc]
+			mem[id] = stack[top]
 			top = top - 1
+		end,
+	}
 
-			trace("add")
-		elseif code[pc] == "sub" then
-			stack[top - 1] = stack[top - 1] - stack[top]
+	while pc <= #code do
+		instruction = code[pc]
+
+		if dispatch[instruction] then
+			local fn = dispatch[instruction]
+			trace_data = code[pc]
+			if fn() then return end
+		elseif binops[instruction] then
+			local fn = binops[instruction]
+			trace_data = stack[top - 1] .. " " .. stack[top]
+			stack[top - 1] = fn(stack[top - 1], stack[top])
 			top = top - 1
-
-			trace("sub")
-		elseif code[pc] == "mul" then
-			stack[top - 1] = stack[top - 1] * stack[top]
-			top = top - 1
-
-			trace("mul")
-		elseif code[pc] == "div" then
-			stack[top - 1] = stack[top - 1] / stack[top]
-			top = top - 1
-
-			trace("div")
-		elseif code[pc] == "mod" then
-			stack[top - 1] = stack[top - 1] % stack[top]
-			top = top - 1
-
-			trace("mod")
-		elseif code[pc] == "pow" then
-			stack[top - 1] = math.pow(stack[top - 1], stack[top])
-			top = top - 1
-
-			trace("pow")
-		elseif code[pc] == "gte" then
-			stack[top - 1] = stack[top - 1] >= stack[top] and 1 or 0
-			top = top - 1
-
-			trace("gte")
-		elseif code[pc] == "lte" then
-			stack[top - 1] = stack[top - 1] <= stack[top] and 1 or 0
-			top = top - 1
-
-			trace("lte")
-		elseif code[pc] == "neq" then
-			stack[top - 1] = stack[top - 1] ~= stack[top] and 1 or 0
-			top = top - 1
-
-			trace("neq")
-		elseif code[pc] == "eq" then
-			stack[top - 1] = stack[top - 1] == stack[top] and 1 or 0
-			top = top - 1
-
-			trace("eq")
-		elseif code[pc] == "gt" then
-			stack[top - 1] = stack[top - 1] > stack[top] and 1 or 0
-			top = top - 1
-
-			trace("gt")
-		elseif code[pc] == "lt" then
-			stack[top - 1] = stack[top - 1] < stack[top] and 1 or 0
-			top = top - 1
-
-			trace("lt")
 		else
-			utils.pf "error: unknown instruction {code[pc]}"
+			utils.ef "error: unknown instruction {pc}"
 		end
+
+		trace(stack, top, instruction, trace_data, flags)
 		pc = pc + 1
 	end
 	return stack

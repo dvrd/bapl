@@ -10,7 +10,9 @@ local function exec(input)
 
 	if ast ~= nil then
 		local code = i.compile(ast)
-		local result = i.run(code, {}, flags)
+		local stack = {}
+		local mem = { x = 1, y = 2 }
+		local result = i.run(code, mem, stack, flags)
 		print(result[1])
 	else
 		utils.pf "error: dont know how to parse that yet buddy"

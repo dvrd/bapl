@@ -65,10 +65,17 @@ local function parseArgs(args)
 	return flags
 end
 
+local function set(list)
+	local set_table = {}
+	for _, l in ipairs(list) do set_table[l] = true end
+	return set_table
+end
+
 return {
 	pt = pt,
 	pf = pf,
 	ef = ef,
 	help = help,
 	parseArgs = parseArgs,
+	set = set,
 }
