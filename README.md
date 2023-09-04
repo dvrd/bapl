@@ -45,4 +45,6 @@ bapl -e "3 + 3" # returns 6 like before
 # To enable tracing just pass --trace as a flag
 ```
 
+To verify the interpreter is working you can run `bapl --check week-3` and it will run the tests for that week
+
 

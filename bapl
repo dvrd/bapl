@@ -28,6 +28,8 @@ elseif flags["filename"] then
 		f:close()
 		exec(input)
 	end
+elseif flags["checkhealth"] then
+	dofile("./" .. flags["checkhealth"] .. "/tests.lua")
 else
 	while true do
 		io.write(">> ")

@@ -14,10 +14,13 @@ local function ef(t)
 end
 
 local function help(exitCode)
-	io.stderr:write("Usage: " .. arg[0] .. " ")
-	io.stderr:write("[--debug] ")
-	io.stderr:write("[--trace] ")
-	io.stderr:write("-e '<expr>' | -f 'prog.exp' | -\n")
+	local filename = arg[0]:match("^.+/(.+)$")
+	io.stderr:write("Usage: " .. filename .. " ")
+	io.stderr:write("[--debug] | ")
+	io.stderr:write("[--trace] | ")
+	io.stderr:write("-e '<expr>' | ")
+	io.stderr:write("-f 'prog.exp' | ")
+	io.stderr:write("--check '<week-n>'\n")
 	os.exit(exitCode)
 end
 
@@ -26,6 +29,8 @@ local function parseArgs(args)
 		["debug"] = false,
 		["trace"] = false,
 		["filename"] = false,
+		["checkhealth"] = false,
+		["expression"] = false,
 	}
 
 	local flag = nil
@@ -34,6 +39,9 @@ local function parseArgs(args)
 
 		if flag == "-h" or flag == "--help" then
 			help(0)
+		elseif flag == "--check" then
+			flags["checkhealth"] = args[i + 1]
+			i = i + 1
 		elseif flag == "-e" then
 			flags["expression"] = args[i + 1]
 			i = i + 1
