@@ -16,6 +16,13 @@ local function tonode(t)
 		elseif t == "assign" then
 			node.val = data.val
 			node.exp = more
+		elseif t == "sequence" then
+			if more == nil then
+				return data
+			else
+				node.st1 = data
+				node.st2 = more
+			end
 		else
 			node.val = data
 		end
@@ -32,8 +39,11 @@ local function fold(lst)
 end
 
 local space = loc.space ^ 0
+local SC = ";" * space
 local OP = "(" * space
 local CP = ")" * space
+local OB = "{" * space
+local CB = "}" * space
 local ID = ("_" + loc.alpha) * (loc.alnum + "_") ^ 0
 local var = ID / tonode "variable" * space
 local assign = "=" * space
@@ -77,18 +87,21 @@ local cmp = v "cmp"
 local atom = v "atom"
 local stat = v "stat"
 local expr = v "expr"
+local stats = v "stats"
+local block = v "block"
 
 local grammar = p { "base",
-	base = stat + expr,
-	stat = var * assign * cmp / tonode "assign",
-	expr = cmp,
-	atom = var + numeral + (OP * expr * CP),
-	pow  = ct(atom * (op_pow * atom) ^ 0) / fold,
-	mul  = ct(pow * (op_mul * pow) ^ 0) / fold,
-	div  = ct(mul * (op_quo * mul) ^ 0) / fold,
-	add  = ct(div * (op_add * div) ^ 0) / fold,
-	sub  = ct(add * (op_sub * add) ^ 0) / fold,
-	cmp  = ct(sub * (op_cmp * sub) ^ 0) / fold,
+	base  = stats + expr,
+	stat  = var * assign * cmp / tonode "assign",
+	stats = stat * (SC * stats) ^ -1 / tonode "sequence",
+	expr  = cmp,
+	atom  = var + numeral + (OP * expr * CP),
+	pow   = ct(atom * (op_pow * atom) ^ 0) / fold,
+	mul   = ct(pow * (op_mul * pow) ^ 0) / fold,
+	div   = ct(mul * (op_quo * mul) ^ 0) / fold,
+	add   = ct(div * (op_add * div) ^ 0) / fold,
+	sub   = ct(add * (op_sub * add) ^ 0) / fold,
+	cmp   = ct(sub * (op_cmp * sub) ^ 0) / fold,
 }
 
 return space * grammar * -1

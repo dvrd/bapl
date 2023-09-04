@@ -39,6 +39,9 @@ local function codeStat(state, ast)
 		codeExp(state, ast.exp)
 		addCode(state, "store")
 		addCode(state, ast.val)
+	elseif ast.tag == "sequence" then
+		codeStat(state, ast.st1)
+		codeStat(state, ast.st2)
 	else
 		codeExp(state, ast)
 	end
