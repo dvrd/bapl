@@ -139,7 +139,12 @@ M.run = function(code, mem, stack, flags)
 			pc = pc + 1
 			local id = code[pc]
 			top = top + 1
-			stack[top] = mem[id]
+			if mem[id] then
+				stack[top] = mem[id]
+			else
+				print("error: variable have not been assigned")
+				return
+			end
 		end,
 		["store"] = function()
 			pc = pc + 1
