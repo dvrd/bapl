@@ -30,7 +30,7 @@ local function codeExp(state, ast)
 		addCode(state, "store")
 		addCode(state, ast.val)
 	else
-		utils.ef("error: invalid tree -> " .. ast.tag)
+		utils.ef("error: invalid expression -> " .. ast.tag)
 	end
 end
 
@@ -42,6 +42,9 @@ local function codeStat(state, ast)
 	elseif ast.tag == "sequence" then
 		codeStat(state, ast.st1)
 		codeStat(state, ast.st2)
+	elseif ast.tag == "ret" then
+		codeExp(state, ast.exp)
+		addCode(state, "ret")
 	else
 		codeExp(state, ast)
 	end
@@ -49,7 +52,13 @@ end
 
 M.compile = function(ast)
 	local state = { code = {} }
+	-- io.write("ast: ")
+	-- utils.pt(ast)
 	codeStat(state, ast)
+	addCode(state, "push")
+	addCode(state, 0)
+	addCode(state, "ret")
+
 	return state.code
 end
 
@@ -124,12 +133,16 @@ M.run = function(code, mem, stack, flags)
 		end,
 	}
 
-	while pc <= #code do
+	while true do
+		io.write("pc: " .. pc .. " | code: ")
+		utils.pt(code)
+		io.write("top: " .. top .. " | stack: ")
+		utils.pt(stack)
 		instruction = code[pc]
 
 		if dispatch[instruction] then
 			local fn = dispatch[instruction]
-			trace_data = instruction == "push" and code[pc] or code[pc + 1]
+			trace_data = code[pc + 1]
 			if fn() then return end
 		elseif binops[instruction] then
 			local fn = binops[instruction]
@@ -143,7 +156,6 @@ M.run = function(code, mem, stack, flags)
 		trace(stack, top, instruction, trace_data, flags)
 		pc = pc + 1
 	end
-	return stack
 end
 
 return M

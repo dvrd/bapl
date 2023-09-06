@@ -23,6 +23,8 @@ local function tonode(t)
 				node.st1 = data
 				node.st2 = more
 			end
+		elseif t == "ret" then
+			node.exp = data
 		else
 			node.val = data
 		end
@@ -39,6 +41,10 @@ local function fold(lst)
 end
 
 local space = loc.space ^ 0
+
+-- Keywords
+local ret = "return" * space
+
 local SC = ";" * space
 local OP = "(" * space
 local CP = ")" * space
@@ -92,8 +98,11 @@ local block = v "block"
 
 local grammar = p { "base",
 	base  = stats + expr,
-	stat  = var * assign * cmp / tonode "assign",
+	stat  = block
+			+ var * assign * cmp / tonode "assign"
+			+ ret * expr / tonode "ret",
 	stats = stat * (SC * stats) ^ -1 / tonode "sequence",
+	block = OB * stats * SC ^ -1 * CB,
 	expr  = cmp,
 	atom  = var + numeral + (OP * expr * CP),
 	pow   = ct(atom * (op_pow * atom) ^ 0) / fold,
