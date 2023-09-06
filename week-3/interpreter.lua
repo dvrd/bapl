@@ -15,6 +15,16 @@ local function addCode(state, op)
 	code[#code + 1] = op
 end
 
+local function var2num(state, id)
+	local num = state.vars[id]
+	if not num then
+		num = state.nvars + 1
+		state.nvars = num
+		state.vars[id] = num
+	end
+	return num
+end
+
 local function codeExp(state, ast)
 	if ast.tag == "number" then
 		addCode(state, "push")
@@ -25,7 +35,7 @@ local function codeExp(state, ast)
 		addCode(state, ast.op.tag)
 	elseif ast.tag == "variable" then
 		addCode(state, "load")
-		addCode(state, ast.val)
+		addCode(state, var2num(state, ast.val))
 	elseif ast.tag == "assign" then
 		addCode(state, "store")
 		addCode(state, ast.val)
@@ -38,10 +48,13 @@ local function codeStat(state, ast)
 	if ast.tag == "assign" then
 		codeExp(state, ast.exp)
 		addCode(state, "store")
-		addCode(state, ast.val)
+		addCode(state, var2num(state, ast.val))
 	elseif ast.tag == "sequence" then
 		codeStat(state, ast.st1)
 		codeStat(state, ast.st2)
+	elseif ast.tag == "print" then
+		codeExp(state, ast.exp)
+		addCode(state, "print")
 	elseif ast.tag == "ret" then
 		codeExp(state, ast.exp)
 		addCode(state, "ret")
@@ -51,7 +64,7 @@ local function codeStat(state, ast)
 end
 
 M.compile = function(ast)
-	local state = { code = {} }
+	local state = { code = {}, vars = {}, nvars = 0 }
 	-- io.write("ast: ")
 	-- utils.pt(ast)
 	codeStat(state, ast)
@@ -114,6 +127,9 @@ M.run = function(code, mem, stack, flags)
 		["ret"] = function()
 			return true -- signal to end loop
 		end,
+		["print"] = function()
+			print(stack[top])
+		end,
 		["push"] = function()
 			pc = pc + 1
 			top = top + 1
@@ -134,15 +150,17 @@ M.run = function(code, mem, stack, flags)
 	}
 
 	while true do
+		--[[
 		io.write("pc: " .. pc .. " | code: ")
 		utils.pt(code)
 		io.write("top: " .. top .. " | stack: ")
 		utils.pt(stack)
+		--]]
 		instruction = code[pc]
 
 		if dispatch[instruction] then
 			local fn = dispatch[instruction]
-			trace_data = code[pc + 1]
+			trace_data = instruction == "print" and stack[top] or code[pc + 1]
 			if fn() then return end
 		elseif binops[instruction] then
 			local fn = binops[instruction]

@@ -6,14 +6,14 @@ local utils = require "utils.core"
 local flags = utils.parseArgs(arg)
 
 local mem = {}
-local function exec(input)
+local function exec(input, is_eval)
 	local ast = i.parse(input)
 
 	if ast ~= nil then
 		local code = i.compile(ast)
 		local stack = {}
 		i.run(code, mem, stack, flags)
-		print(stack[1])
+		if is_eval then print(stack[1]) end
 	else
 		utils.pf "error: dont know how to parse that yet buddy"
 	end
@@ -42,7 +42,7 @@ else
 		elseif input == "clear" then
 			os.execute("clear")
 		else
-			exec(input)
+			exec(input, "eval")
 		end
 	end
 end

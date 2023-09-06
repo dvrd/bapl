@@ -23,7 +23,7 @@ local function tonode(t)
 				node.st1 = data
 				node.st2 = more
 			end
-		elseif t == "ret" then
+		elseif t == "ret" or t == "print" then
 			node.exp = data
 		else
 			node.val = data
@@ -96,9 +96,12 @@ local expr = v "expr"
 local stats = v "stats"
 local block = v "block"
 
+local print = p "@" * space
+
 local grammar = p { "base",
 	base  = stats + expr,
 	stat  = block
+			+ print * expr / tonode "print"
 			+ var * assign * cmp / tonode "assign"
 			+ ret * expr / tonode "ret",
 	stats = stat * (SC * stats) ^ -1 / tonode "sequence",
