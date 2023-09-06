@@ -5,7 +5,7 @@ local function check(case, expect)
 	local ast = i.parse(case)
 	local code = i.compile(ast)
 	local stack = {}
-	local mem = { x = 1, y = 2 }
+	local mem = {}
 	i.run(code, mem, stack, {})
 	print("\nresult: " .. tostring(stack[1]) .. " | expected: " .. expect .. "\n")
 	assert(stack[1] == expect, "failed: " .. case)
@@ -39,8 +39,9 @@ local cases = {
 	test_paren = { "2 * (2 + 3)", 2 * (2 + 3) },
 	test_unary_neg = { "2 + -3", 2 + -3 },
 	test_unary_neg_no_op = { "2 -3", 2 - 3 },
-	test_load_of_x = { "x", 1 },
-	test_load_op_x_add_y = { "x + y", 3 },
+	test_assign_of_x = { "x = 1; @ x", 1 },
+	test_assign_x_add_y = { "x = 1; y = 2; @ x + y", 3 },
+	test_block = { "{ x = 1; y = 2; }; @ x + y", 3 },
 }
 
 for test_name, case in pairs(cases) do

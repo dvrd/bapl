@@ -47,4 +47,13 @@ bapl -e "3 + 3" # returns 6 like before
 
 To verify the interpreter is working you can run `bapl --check week-3` and it will run the tests for that week
 
+### Added
+
+- [x] Variables
+- [x] Statements
+- [x] Assignments
+- [x] Block statements
+- [x] Return statements
+- [x] Print statement `@`
+
 
