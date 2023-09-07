@@ -42,6 +42,7 @@ local cases = {
 	test_assign_of_x = { "x = 1; @ x", 1 },
 	test_assign_x_add_y = { "x = 1; y = 2; @ x + y", 3 },
 	test_block = { "{ x = 1; y = 2; }; @ x + y", 3 },
+	test_empty_block = { "{};", 0 },
 }
 
 for test_name, case in pairs(cases) do

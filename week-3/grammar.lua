@@ -23,6 +23,12 @@ local function tonode(t)
 				node.st1 = data
 				node.st2 = more
 			end
+		elseif t == "block" then
+			if type(data) == "table" then
+				node.st = data
+			else
+				node.st = nil
+			end
 		elseif t == "ret" or t == "print" then
 			node.exp = data
 		else
@@ -91,21 +97,21 @@ local add = v "add"
 local sub = v "sub"
 local cmp = v "cmp"
 local atom = v "atom"
-local stat = v "stat"
+local stmt = v "stmt"
 local expr = v "expr"
-local stats = v "stats"
+local stmts = v "stmts"
 local block = v "block"
 
 local print = p "@" * space
 
 local grammar = p { "base",
-	base  = stats + expr,
-	stat  = block
+	base  = stmts + expr,
+	stmt  = block
 			+ print * expr / tonode "print"
 			+ var * assign * cmp / tonode "assign"
 			+ ret * expr / tonode "ret",
-	stats = stat * (SC * stats) ^ -1 / tonode "sequence",
-	block = OB * stats * SC ^ -1 * CB,
+	stmts = (stmt * SC ^ -1) * stmts ^ -1 / tonode "sequence",
+	block = OB * stmts ^ 0 * CB / tonode "block",
 	expr  = cmp,
 	atom  = var + numeral + (OP * expr * CP),
 	pow   = ct(atom * (op_pow * atom) ^ 0) / fold,

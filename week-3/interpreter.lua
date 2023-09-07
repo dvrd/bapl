@@ -40,7 +40,12 @@ local function codeExp(state, ast)
 		addCode(state, "store")
 		addCode(state, ast.val)
 	else
-		utils.ef("error: invalid expression -> " .. ast.tag)
+		if type(ast) == "table" then
+			io.write("error: invalid expression -> ")
+			utils.pt(ast)
+		else
+			print("error: invalid expression -> " .. ast)
+		end
 	end
 end
 
@@ -52,6 +57,8 @@ local function codeStat(state, ast)
 	elseif ast.tag == "sequence" then
 		codeStat(state, ast.st1)
 		codeStat(state, ast.st2)
+	elseif ast.tag == "block" then
+		if ast.st then codeStat(state, ast.st) end
 	elseif ast.tag == "print" then
 		codeExp(state, ast.exp)
 		addCode(state, "print")
