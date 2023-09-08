@@ -29,6 +29,9 @@ local function codeExp(state, ast)
 	if ast.tag == "number" then
 		addCode(state, "push")
 		addCode(state, ast.val)
+	elseif ast.tag == "unop" then
+		codeExp(state, ast.e)
+		addCode(state, ast.op.tag)
 	elseif ast.tag == "binop" then
 		codeExp(state, ast.e1)
 		codeExp(state, ast.e2)
@@ -72,8 +75,10 @@ end
 
 M.compile = function(ast)
 	local state = { code = {}, vars = {}, nvars = 0 }
-	-- io.write("ast: ")
-	-- utils.pt(ast)
+	--[[
+	io.write("ast: ")
+	utils.pt(ast)
+	--]]
 	codeStat(state, ast)
 	addCode(state, "push")
 	addCode(state, 0)
@@ -122,6 +127,11 @@ local binops = {
 	["eq"]  = function(x, y) return x == y and 1 or 0 end,
 	["gt"]  = function(x, y) return x > y and 1 or 0 end,
 	["lt"]  = function(x, y) return x < y and 1 or 0 end
+}
+
+local unops = {
+	["neg"] = function(x) return -x end,
+	["pos"] = function(x) return x end,
 }
 
 M.run = function(code, mem, stack, flags)
@@ -179,6 +189,9 @@ M.run = function(code, mem, stack, flags)
 			trace_data = stack[top - 1] .. " " .. stack[top]
 			stack[top - 1] = fn(stack[top - 1], stack[top])
 			top = top - 1
+		elseif unops[instruction] then
+			local fn = unops[instruction]
+			stack[top] = fn(stack[top])
 		else
 			utils.ef "error: unknown instruction {pc}"
 		end
