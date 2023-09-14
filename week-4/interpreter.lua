@@ -1,6 +1,6 @@
 local inspect = require "inspect"
 local utils = require "utils.core"
-local grammar = require "week-3.grammar"
+local grammar = require "week-4.grammar"
 
 local M = {
 	inspect = inspect

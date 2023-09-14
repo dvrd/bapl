@@ -1,4 +1,5 @@
 local inspect = require "inspect"
+local lpeg = require "lpeg"
 local f = require "F"
 
 local function pt(t)
@@ -22,6 +23,16 @@ local function help(exitCode)
 	io.stderr:write("-f 'prog.exp' | ")
 	io.stderr:write("--check '<week-n>'\n")
 	os.exit(exitCode)
+end
+
+local function is_seline_file(str)
+	local p = lpeg.P
+	local r = lpeg.R
+	local alpha = r "az"
+	local num = r "09"
+	local alphanum = alpha + num
+
+	return (alpha * alphanum ^ 0 * ".sel"):match(str)
 end
 
 local function parseArgs(args)
@@ -51,6 +62,8 @@ local function parseArgs(args)
 		elseif flag == "-f" then
 			flags["filename"] = args[i + 1]
 			i = i + 1
+		elseif is_seline_file(flag) then
+			flags["filename"] = flag
 		elseif flag:match("-f") then
 			local _, _, _, filename = flag:find("(-f)(.*)")
 			flags["filename"] = filename

@@ -1,5 +1,5 @@
 local lpeg = require "lpeg"
----[[
+--[[
 local utils = require "utils.core"
 --]]
 
@@ -9,6 +9,13 @@ local s = lpeg.S
 local r = lpeg.R
 local ct = lpeg.Ct
 local v = lpeg.V
+
+local function i(msg)
+	return p(function()
+		print(msg)
+		return true
+	end)
+end
 
 local function tonode(t)
 	return function(data, more)
@@ -34,7 +41,6 @@ local function tonode(t)
 		elseif t == "ret" or t == "print" then
 			node.exp = data
 		elseif t == "unary" then
-			utils.pt(data)
 			if data == "-" then
 				node.tag = "neg"
 			elseif data == "+" then
@@ -45,21 +51,21 @@ local function tonode(t)
 		else
 			node.val = data
 		end
-		---[[
+		--[[
 		utils.pt(node)
 		--]]
 		return node
 	end
 end
 
-local function foldUnary(op, exp, val)
+local function packUnary(op, exp, val)
 	return { tag = "unop", op = op, e = exp }
 end
 
 local function fold(lst)
 	local ast = lst[1]
-	for i = 2, #lst, 2 do
-		ast = { tag = "binop", e1 = ast, op = lst[i], e2 = lst[i + 1] }
+	for idx = 2, #lst, 2 do
+		ast = { tag = "binop", e1 = ast, op = lst[idx], e2 = lst[idx + 1] }
 	end
 	return ast
 end
@@ -139,8 +145,8 @@ local grammar = p { "base",
 	expr  = cmp,
 	atom  = var + numeral,
 	term  = atom + (OP * expr * CP),
-	unary = op_unary * unary / foldUnary + term,
-	pow   = ct(unary * (op_pow * unary) ^ 0) / fold,
+	-- unary = op_unary * unary / packUnary + term,
+	pow   = ct(term * (op_pow * term) ^ 0) / fold,
 	mul   = ct(pow * (op_mul * pow) ^ 0) / fold,
 	div   = ct(mul * (op_quo * mul) ^ 0) / fold,
 	add   = ct(div * (op_add * div) ^ 0) / fold,

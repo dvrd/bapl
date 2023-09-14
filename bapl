@@ -1,6 +1,6 @@
 #!/usr/bin/env lua
 
-local i = require "week-3.interpreter"
+local i = require "week-4.interpreter"
 local utils = require "utils.core"
 
 local flags = utils.parseArgs(arg)
@@ -32,7 +32,7 @@ elseif flags["filename"] then
 	end
 elseif flags["checkhealth"] then
 	dofile("./" .. flags["checkhealth"] .. "/tests.lua")
-else
+elseif #arg == 0 then
 	while true do
 		io.write(">> ")
 		input = io.read()
