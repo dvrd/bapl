@@ -1,4 +1,5 @@
 local lpeg = require "lpeg"
+local math = require "math"
 --[[
 local utils = require "utils.core"
 --]]
@@ -70,7 +71,15 @@ local function fold(lst)
 	return ast
 end
 
-local space = loc.space ^ 0
+LAST_LINE = 0
+MAXMATCH = 0
+local space = loc.space ^ 0 * p(function(sub, pos)
+	MAXMATCH = math.max(MAXMATCH, pos)
+	if string.sub(sub, pos, pos + 1) == ";\n" then
+		LAST_LINE = LAST_LINE + 1
+	end
+	return true
+end)
 
 -- Keywords
 local ret = "return" * space
@@ -135,12 +144,12 @@ local unary = v "unary"
 local print = p "@" * space
 
 local grammar = p { "base",
-	base  = stmts + expr,
+	base  = stmts,
 	stmt  = block
 			+ print * expr / tonode "print"
-			+ var * assign * cmp / tonode "assign"
+			+ var * assign * expr / tonode "assign"
 			+ ret * expr / tonode "ret",
-	stmts = (stmt * SC ^ -1) * stmts ^ -1 / tonode "sequence",
+	stmts = (stmt * SC) * stmts ^ -1 / tonode "sequence",
 	block = OB * stmts ^ 0 * CB / tonode "block",
 	expr  = cmp,
 	atom  = var + numeral,

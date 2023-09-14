@@ -6,8 +6,17 @@ local M = {
 	inspect = inspect
 }
 
+local function syntaxError(input)
+	io.stderr:write("syntax error at position ", MAXMATCH, " line ", LAST_LINE, "\n")
+	io.stderr:write(string.sub(input, MAXMATCH - 5, MAXMATCH - 1), 	"\27[1;4;31m",  string.sub(input, MAXMATCH, MAXMATCH),"\27[0m", string.sub(input, MAXMATCH+1, MAXMATCH + 10), "\n")
+end
+
 M.parse = function(input)
-	return grammar:match(input)
+	local ret = grammar:match(input)
+	if not ret then
+		syntaxError(input)
+	end
+	return ret
 end
 
 local function addCode(state, op)

@@ -1,5 +1,7 @@
-x = 1
-y = 2
+x = 1;
+y = 2;
 c = 8
-@ x + y
-return x + y
+@ x + y;
+@ c + 7 / 2;
+
+return x + y;
