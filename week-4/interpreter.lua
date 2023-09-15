@@ -6,11 +6,34 @@ local M = {
 	inspect = inspect
 }
 
+local function findPrevStmt(input, pos)
+	local match = 0
+	local newPos = 0
+	for i = pos - 1, 0, -1 do
+		if string.sub(input, i, i) == ";" then
+			match = match + 1
+		end
+		if match == 3 then 
+			newPos = i + 1
+			break 
+		end
+		i = i - 1
+	end
+	return i and i or newPos
+end
+
 local function syntaxError(input)
-	local low = MAXMATCH - 15 < 0 and 0 or MAXMATCH - 15
-	local high = MAXMATCH + 15 > #input and 0 or MAXMATCH + 15
-	io.stderr:write("syntax error at position ", MAXMATCH, " line ", LAST_LINE, "\n")
-	io.stderr:write(string.sub(input, low, MAXMATCH - 1), 	"\27[1;4;31m",  string.sub(input, MAXMATCH, MAXMATCH),"\27[0m", string.sub(input, MAXMATCH + 1, high), "\n")
+	local high = MAXMATCH + 20 > #input and 0 or MAXMATCH + 20
+	local low = findPrevStmt(input, MAXMATCH)
+
+	io.stderr:write("SYNTAX ERROR at position ", MAXMATCH, " of ", #input, "\n")
+	io.stderr:write("on line ", LAST_LINE, ": ")
+
+	io.stderr:write(string.sub(input, low, MAXMATCH - 3)) -- Pre-error
+
+	io.stderr:write("\27[1;4;31m",  string.sub(input, MAXMATCH - 2, MAXMATCH + 2),"\27[0m") -- Error highlighting
+
+	io.stderr:write(string.sub(input, MAXMATCH + 3, high), "\n") -- Post-error
 end
 
 M.parse = function(input)
@@ -21,38 +44,39 @@ M.parse = function(input)
 	return ret
 end
 
-local function addCode(state, op)
-	local code = state.code
-	code[#code + 1] = op
+local Compiler = { code = {}, vars = {}, nvars = 0 }
+
+function Compiler:addCode(op)
+	self.code[#self.code + 1] = op
 end
 
-local function var2num(state, id)
-	local num = state.vars[id]
+function Compiler:var2num(id)
+	local num = self.vars[id]
 	if not num then
-		num = state.nvars + 1
-		state.nvars = num
-		state.vars[id] = num
+		num = self.nvars + 1
+		self.nvars = num
+		self.vars[id] = num
 	end
 	return num
 end
 
-local function codeExp(state, ast)
+function Compiler:codeExp(ast)
 	if ast.tag == "number" then
-		addCode(state, "push")
-		addCode(state, ast.val)
+		self:addCode("push")
+		self:addCode(ast.val)
 	elseif ast.tag == "unop" then
-		codeExp(state, ast.e)
-		addCode(state, ast.op.tag)
+		codeExp(ast.e)
+		self:addCode(ast.op.tag)
 	elseif ast.tag == "binop" then
-		codeExp(state, ast.e1)
-		codeExp(state, ast.e2)
-		addCode(state, ast.op.tag)
+		self:codeExp(ast.e1)
+		self:codeExp(ast.e2)
+		self:addCode(ast.op.tag)
 	elseif ast.tag == "variable" then
-		addCode(state, "load")
-		addCode(state, var2num(state, ast.val))
+		self:addCode("load")
+		self:addCode(self:var2num(ast.val))
 	elseif ast.tag == "assign" then
-		addCode(state, "store")
-		addCode(state, ast.val)
+		self:addCode("store")
+		self:addCode(ast.val)
 	else
 		if type(ast) == "table" then
 			io.write("error: invalid expression -> ")
@@ -63,39 +87,39 @@ local function codeExp(state, ast)
 	end
 end
 
-local function codeStat(state, ast)
+function Compiler:codeStat(ast)
+
 	if ast.tag == "assign" then
-		codeExp(state, ast.exp)
-		addCode(state, "store")
-		addCode(state, var2num(state, ast.val))
+		self:codeExp(ast.exp)
+		self:addCode("store")
+		self:addCode(self:var2num(ast.val))
 	elseif ast.tag == "sequence" then
-		codeStat(state, ast.st1)
-		codeStat(state, ast.st2)
+		self:codeStat(ast.st1)
+		self:codeStat(ast.st2)
 	elseif ast.tag == "block" then
-		if ast.st then codeStat(state, ast.st) end
+		if ast.st then self:codeStat(ast.st) end
 	elseif ast.tag == "print" then
-		codeExp(state, ast.exp)
-		addCode(state, "print")
+		self:codeExp(ast.exp)
+		self:addCode("print")
 	elseif ast.tag == "ret" then
-		codeExp(state, ast.exp)
-		addCode(state, "ret")
+		self:codeExp(ast.exp)
+		self:addCode("ret")
 	else
-		codeExp(state, ast)
+		self:codeExp(ast)
 	end
 end
 
 M.compile = function(ast)
-	local state = { code = {}, vars = {}, nvars = 0 }
 	--[[
 	io.write("ast: ")
 	utils.pt(ast)
 	--]]
-	codeStat(state, ast)
-	addCode(state, "push")
-	addCode(state, 0)
-	addCode(state, "ret")
+	Compiler:codeStat(ast)	
+	Compiler:addCode("push")
+	Compiler:addCode(0)
+	Compiler:addCode("ret")
 
-	return state.code
+	return Compiler.code
 end
 
 local function dumpStack(stack, top)
@@ -172,7 +196,7 @@ M.run = function(code, mem, stack, flags)
 				stack[top] = mem[id]
 			else
 				print("error: variable have not been assigned")
-				return
+				return true
 			end
 		end,
 		["store"] = function()

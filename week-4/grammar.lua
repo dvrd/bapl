@@ -9,11 +9,14 @@ local p = lpeg.P
 local s = lpeg.S
 local r = lpeg.R
 local ct = lpeg.Ct
+local c = lpeg.C
+local cmt = lpeg.Cmt
 local v = lpeg.V
 
 local function i(msg)
-	return p(function(sub, pos)
-		print(msg, string.sub(sub, pos, pos))
+	return p(function(sub, pos, cap)
+		io.stderr:write(msg, string.sub(sub, pos, pos), cap)
+		io.stderr:write("\n")
 		return true
 	end)
 end
@@ -49,12 +52,11 @@ local function tonode(t)
 			elseif data == "!" then
 				node.tag = "not"
 			end
+		elseif t == "variable" then
+			node.val = data
 		else
 			node.val = data
 		end
-		--[[
-		utils.pt(node)
-		--]]
 		return node
 	end
 end
@@ -75,17 +77,19 @@ LAST_LINE = 0
 MAXMATCH = 0
 local space = v "space"
 
--- Keywords
-local ret = "return" * space
+local reserved = { "return", "if" }
+local excluded = p(false)
+for i = 1, #reserved do
+	excluded = excluded + reserved[i]
+end
+excluded = excluded * -loc.alnum
 
-local SC = ";" * space
-local OP = "(" * space
-local CP = ")" * space
-local OB = "{" * space
-local CB = "}" * space
-local ID = ("_" + loc.alpha) * (loc.alnum + "_") ^ 0
+local function checkReserved(sub, pos, cap)
+	return not excluded:match(cap)
+end
+
+local ID = cmt(c(loc.alpha * loc.alnum ^ 0), checkReserved)
 local var = ID / tonode "variable" * space
-local assign = "=" * space
 local block_comment = "#{" * (p(1) - p "#}") ^ 0
 local comment = "#" * (p(1) - p "\n") ^ 0
 local comments = block_comment + comment
@@ -139,7 +143,14 @@ local stmts = v "stmts"
 local block = v "block"
 local unary = v "unary"
 
-local print = p "@" * space
+local function token(t)
+	return t * space
+end
+
+local function keyword(w)
+	assert(excluded:match(w))
+	return w * -loc.alnum * space
+end
 
 local function executionTracker(sub, pos)
 	MAXMATCH = math.max(MAXMATCH, pos)
@@ -152,15 +163,15 @@ end
 return p { "base",
 	base  = space * stmts * -1,
 	stmt  = block
-			+ print * expr / tonode "print"
-			+ var * assign * expr / tonode "assign"
-			+ ret * expr / tonode "ret",
-	stmts = (stmt * SC) * stmts ^ -1 / tonode "sequence",
-	block = OB * stmts ^ 0 * CB / tonode "block",
+			+ token"@" * expr / tonode "print"
+			+ var * token"=" * expr / tonode "assign"
+			+ keyword"return" * expr / tonode "ret",
+	stmts = (stmt * token";") * stmts ^ -1 / tonode "sequence",
+	block = token"{" * stmts ^ 0 * token"}" / tonode "block",
 	space = (loc.space + comments) ^ 0 * p(executionTracker),
 	expr  = cmp,
 	atom  = var + numeral,
-	term  = atom + (OP * expr * CP),
+	term  = atom + (token"(" * expr * token")"),
 	-- unary = op_unary * unary / packUnary + term,
 	pow   = ct(term * (op_pow * term) ^ 0) / fold,
 	mul   = ct(pow * (op_mul * pow) ^ 0) / fold,
