@@ -30,7 +30,7 @@ elseif flags["filename"] then
 	end
 elseif flags["checkhealth"] then
 	dofile("./" .. flags["checkhealth"] .. "/tests.lua")
-elseif #arg == 0 then
+elseif #arg == 0 or flags["trace"] then
 	while true do
 		io.write(">> ")
 		input = io.read()

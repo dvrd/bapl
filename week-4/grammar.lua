@@ -62,6 +62,7 @@ local function tonode(t)
 end
 
 local function packUnary(op, exp, val)
+	print(op, exp, val)
 	return { tag = "unop", op = op, e = exp }
 end
 
@@ -94,7 +95,6 @@ local block_comment = "#{" * (p(1) - p "#}") ^ 0
 local comment = "#" * (p(1) - p "\n") ^ 0
 local comments = block_comment + comment
 
--- Symbols
 local dot = p "."
 local underscore = p "_"
 
@@ -163,16 +163,16 @@ end
 return p { "base",
 	base  = space * stmts * -1,
 	stmt  = block
-			+ token"@" * expr / tonode "print"
-			+ var * token"=" * expr / tonode "assign"
-			+ keyword"return" * expr / tonode "ret",
-	stmts = (stmt * token";") * stmts ^ -1 / tonode "sequence",
-	block = token"{" * stmts ^ 0 * token"}" / tonode "block",
+			+ token "@" * expr / tonode "print"
+			+ var * token "=" * expr / tonode "assign"
+			+ keyword "return" * expr / tonode "ret",
+	stmts = (stmt * token ";") * stmts ^ -1 / tonode "sequence",
+	block = token "{" * stmts ^ 0 * token "}" / tonode "block",
 	space = (loc.space + comments) ^ 0 * p(executionTracker),
 	expr  = cmp,
 	atom  = var + numeral,
-	term  = atom + (token"(" * expr * token")"),
-	-- unary = op_unary * unary / packUnary + term,
+	term  = atom + (token "(" * expr * token ")"),
+	unary = op_unary * atom / packUnary + term,
 	pow   = ct(term * (op_pow * term) ^ 0) / fold,
 	mul   = ct(pow * (op_mul * pow) ^ 0) / fold,
 	div   = ct(mul * (op_quo * mul) ^ 0) / fold,

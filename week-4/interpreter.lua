@@ -13,9 +13,9 @@ local function findPrevStmt(input, pos)
 		if string.sub(input, i, i) == ";" then
 			match = match + 1
 		end
-		if match == 3 then 
+		if match == 3 then
 			newPos = i + 1
-			break 
+			break
 		end
 		i = i - 1
 	end
@@ -29,11 +29,11 @@ local function syntaxError(input)
 	io.stderr:write("SYNTAX ERROR at position ", MAXMATCH, " of ", #input, "\n")
 	io.stderr:write("on line ", LAST_LINE, ": ")
 
-	io.stderr:write(string.sub(input, low, MAXMATCH - 3)) -- Pre-error
+	io.stderr:write(string.sub(input, low, MAXMATCH - 3))                                  -- Pre-error
 
-	io.stderr:write("\27[1;4;31m",  string.sub(input, MAXMATCH - 2, MAXMATCH + 2),"\27[0m") -- Error highlighting
+	io.stderr:write("\27[1;4;31m", string.sub(input, MAXMATCH - 2, MAXMATCH + 2), "\27[0m") -- Error highlighting
 
-	io.stderr:write(string.sub(input, MAXMATCH + 3, high), "\n") -- Post-error
+	io.stderr:write(string.sub(input, MAXMATCH + 3, high), "\n")                           -- Post-error
 end
 
 M.parse = function(input)
@@ -65,7 +65,7 @@ function Compiler:codeExp(ast)
 		self:addCode("push")
 		self:addCode(ast.val)
 	elseif ast.tag == "unop" then
-		codeExp(ast.e)
+		self:codeExp(ast.e)
 		self:addCode(ast.op.tag)
 	elseif ast.tag == "binop" then
 		self:codeExp(ast.e1)
@@ -88,7 +88,6 @@ function Compiler:codeExp(ast)
 end
 
 function Compiler:codeStat(ast)
-
 	if ast.tag == "assign" then
 		self:codeExp(ast.exp)
 		self:addCode("store")
@@ -110,16 +109,19 @@ function Compiler:codeStat(ast)
 end
 
 M.compile = function(ast)
-	--[[
+	---[[
 	io.write("ast: ")
 	utils.pt(ast)
+	utils.pt(Compiler)
 	--]]
-	Compiler:codeStat(ast)	
+	Compiler:codeStat(ast)
 	Compiler:addCode("push")
 	Compiler:addCode(0)
 	Compiler:addCode("ret")
 
-	return Compiler.code
+	local result = Compiler.code
+	Compiler.code = {}
+	return result
 end
 
 local function dumpStack(stack, top)
@@ -196,7 +198,7 @@ M.run = function(code, mem, stack, flags)
 				stack[top] = mem[id]
 			else
 				print("error: variable have not been assigned")
-				return true
+				return
 			end
 		end,
 		["store"] = function()
@@ -208,7 +210,7 @@ M.run = function(code, mem, stack, flags)
 	}
 
 	while true do
-		--[[
+		---[[
 		io.write("pc: " .. pc .. " | code: ")
 		utils.pt(code)
 		io.write("top: " .. top .. " | stack: ")
