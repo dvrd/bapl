@@ -14,8 +14,6 @@ local function exec(input, is_eval)
 		local stack = {}
 		i.run(code, mem, stack, flags)
 		if is_eval then print(stack[1]) end
-	else
-		utils.pf "error: dont know how to parse that yet buddy"
 	end
 end
 

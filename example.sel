@@ -1,6 +1,9 @@
-x = 1;
+x = 1; #this is a comment
 y = 2;
-c = 8
+#{
+this is a block comment
+#}
+c = 8;
 @ x + y;
 @ c + 7 / 2;
 

@@ -12,8 +12,8 @@ local ct = lpeg.Ct
 local v = lpeg.V
 
 local function i(msg)
-	return p(function()
-		print(msg)
+	return p(function(sub, pos)
+		print(msg, string.sub(sub, pos, pos))
 		return true
 	end)
 end
@@ -73,13 +73,7 @@ end
 
 LAST_LINE = 0
 MAXMATCH = 0
-local space = loc.space ^ 0 * p(function(sub, pos)
-	MAXMATCH = math.max(MAXMATCH, pos)
-	if string.sub(sub, pos, pos + 1) == ";\n" then
-		LAST_LINE = LAST_LINE + 1
-	end
-	return true
-end)
+local space = v "space"
 
 -- Keywords
 local ret = "return" * space
@@ -92,6 +86,9 @@ local CB = "}" * space
 local ID = ("_" + loc.alpha) * (loc.alnum + "_") ^ 0
 local var = ID / tonode "variable" * space
 local assign = "=" * space
+local block_comment = "#{" * (p(1) - p "#}") ^ 0
+local comment = "#" * (p(1) - p "\n") ^ 0
+local comments = block_comment + comment
 
 -- Symbols
 local dot = p "."
@@ -127,6 +124,7 @@ local op_cmp = gte + lte + gt + lt + neq + eq
 
 local op_unary = s "!+-" ^ -1 / tonode "unary" * space
 
+-- Rules
 local pow = v "pow"
 local mul = v "mul"
 local div = v "div"
@@ -143,14 +141,23 @@ local unary = v "unary"
 
 local print = p "@" * space
 
-local grammar = p { "base",
-	base  = stmts,
+local function executionTracker(sub, pos)
+	MAXMATCH = math.max(MAXMATCH, pos)
+	if string.sub(sub, pos, pos + 1) == ";\n" then
+		LAST_LINE = LAST_LINE + 1
+	end
+	return true
+end
+
+return p { "base",
+	base  = space * stmts * -1,
 	stmt  = block
 			+ print * expr / tonode "print"
 			+ var * assign * expr / tonode "assign"
 			+ ret * expr / tonode "ret",
 	stmts = (stmt * SC) * stmts ^ -1 / tonode "sequence",
 	block = OB * stmts ^ 0 * CB / tonode "block",
+	space = (loc.space + comments) ^ 0 * p(executionTracker),
 	expr  = cmp,
 	atom  = var + numeral,
 	term  = atom + (OP * expr * CP),
@@ -162,5 +169,3 @@ local grammar = p { "base",
 	sub   = ct(add * (op_sub * add) ^ 0) / fold,
 	cmp   = ct(sub * (op_cmp * sub) ^ 0) / fold,
 }
-
-return space * grammar * -1

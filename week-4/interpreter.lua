@@ -7,8 +7,10 @@ local M = {
 }
 
 local function syntaxError(input)
+	local low = MAXMATCH - 15 < 0 and 0 or MAXMATCH - 15
+	local high = MAXMATCH + 15 > #input and 0 or MAXMATCH + 15
 	io.stderr:write("syntax error at position ", MAXMATCH, " line ", LAST_LINE, "\n")
-	io.stderr:write(string.sub(input, MAXMATCH - 5, MAXMATCH - 1), 	"\27[1;4;31m",  string.sub(input, MAXMATCH, MAXMATCH),"\27[0m", string.sub(input, MAXMATCH+1, MAXMATCH + 10), "\n")
+	io.stderr:write(string.sub(input, low, MAXMATCH - 1), 	"\27[1;4;31m",  string.sub(input, MAXMATCH, MAXMATCH),"\27[0m", string.sub(input, MAXMATCH + 1, high), "\n")
 end
 
 M.parse = function(input)
