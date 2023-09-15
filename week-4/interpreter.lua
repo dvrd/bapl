@@ -10,21 +10,22 @@ local function findPrevStmt(input, pos)
 	local match = 0
 	local newPos = 0
 	for i = pos - 1, 0, -1 do
+		newPos = i
 		if string.sub(input, i, i) == ";" then
 			match = match + 1
 		end
 		if match == 3 then
-			newPos = i + 1
-			break
+			return newPos
 		end
 		i = i - 1
 	end
-	return i and i or newPos
+	return newPos
 end
 
 local function syntaxError(input)
 	local high = MAXMATCH + 20 > #input and 0 or MAXMATCH + 20
-	local low = findPrevStmt(input, MAXMATCH)
+	local prev = findPrevStmt(input, MAXMATCH)
+	local low = prev > 0 and prev or 0
 
 	io.stderr:write("SYNTAX ERROR at position ", MAXMATCH, " of ", #input, "\n")
 	io.stderr:write("on line ", LAST_LINE, ": ")

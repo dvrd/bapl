@@ -13,14 +13,6 @@ local c = lpeg.C
 local cmt = lpeg.Cmt
 local v = lpeg.V
 
-local function i(msg)
-	return p(function(sub, pos, cap)
-		io.stderr:write(msg, string.sub(sub, pos, pos), cap)
-		io.stderr:write("\n")
-		return true
-	end)
-end
-
 local function tonode(t)
 	return function(data, more)
 		local node = { tag = t }
@@ -80,23 +72,23 @@ local space = v "space"
 
 local reserved = { "return", "if" }
 local excluded = p(false)
-for i = 1, #reserved do
-	excluded = excluded + reserved[i]
+for idx = 1, #reserved do
+	excluded = excluded + reserved[idx]
 end
 excluded = excluded * -loc.alnum
 
-local function checkReserved(sub, pos, cap)
+local function checkReserved(_, _, cap)
 	return not excluded:match(cap)
 end
 
-local ID = cmt(c(loc.alpha * loc.alnum ^ 0), checkReserved)
+local dot = p "."
+local underscore = p "_"
+
+local ID = cmt(c(underscore + loc.alpha * (loc.alnum + underscore) ^ 0), checkReserved)
 local var = ID / tonode "variable" * space
 local block_comment = "#{" * (p(1) - p "#}") ^ 0
 local comment = "#" * (p(1) - p "\n") ^ 0
 local comments = block_comment + comment
-
-local dot = p "."
-local underscore = p "_"
 
 local digit = loc.digit ^ 1
 
@@ -152,7 +144,7 @@ local function keyword(w)
 	return w * -loc.alnum * space
 end
 
-local function executionTracker(sub, pos)
+local function executionTracker(_, pos)
 	MAXMATCH = math.max(MAXMATCH, pos)
 	if string.sub(sub, pos, pos + 1) == ";\n" then
 		LAST_LINE = LAST_LINE + 1
@@ -161,7 +153,7 @@ local function executionTracker(sub, pos)
 end
 
 return p { "base",
-	base  = space * stmts * -1,
+	base  = space * (stmts + expr) * -1,
 	stmt  = block
 			+ token "@" * expr / tonode "print"
 			+ var * token "=" * expr / tonode "assign"
@@ -173,7 +165,7 @@ return p { "base",
 	atom  = var + numeral,
 	term  = atom + (token "(" * expr * token ")"),
 	unary = op_unary * atom / packUnary + term,
-	pow   = ct(term * (op_pow * term) ^ 0) / fold,
+	pow   = ct(unary * (op_pow * unary) ^ 0) / fold,
 	mul   = ct(pow * (op_mul * pow) ^ 0) / fold,
 	div   = ct(mul * (op_quo * mul) ^ 0) / fold,
 	add   = ct(div * (op_add * div) ^ 0) / fold,
