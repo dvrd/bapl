@@ -36,14 +36,23 @@ local function exec(code, mem, stack, flags)
 		["getarray"] = function()
 			local array = stack[top - 1]
 			local index = stack[top]
-			stack[top - 1] = array[index]
+			if array.size > index and index > 0 then
+				stack[top - 1] = array[index]
+			else
+				print("error: index out of bounds")
+				stack[top - 1] = nil
+			end
 			top = top - 1
 		end,
 		["setarray"] = function()
 			local array = stack[top - 2]
 			local index = stack[top - 1]
-			local value = stack[top]
-			array[index] = value
+			if array.size > index and index > 0 then
+				local value = stack[top]
+				array[index] = value
+			else
+				print("error: assignment index out of bounds")
+			end
 			top = top - 3
 		end,
 		["ret"] = function()
