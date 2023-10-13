@@ -36,10 +36,10 @@ local function exec(code, mem, stack, flags)
 		["getarray"] = function()
 			local array = stack[top - 1]
 			local index = stack[top]
-			if array.size > index and index > 0 then
+			if array.size > index and index >= 0 then
 				stack[top - 1] = array[index]
 			else
-				print("error: index out of bounds")
+				print("IndexError: index out of range" .. " (" .. index .. " of " .. array.size .. ")")
 				stack[top - 1] = nil
 			end
 			top = top - 1
@@ -47,11 +47,11 @@ local function exec(code, mem, stack, flags)
 		["setarray"] = function()
 			local array = stack[top - 2]
 			local index = stack[top - 1]
-			if array.size > index and index > 0 then
+			if array.size > index and index >= 0 then
 				local value = stack[top]
 				array[index] = value
 			else
-				print("error: assignment index out of bounds")
+				print("IndexError: assignment index out of range" .. " (" .. index .. " of " .. array.size .. ")")
 			end
 			top = top - 3
 		end,
@@ -59,7 +59,20 @@ local function exec(code, mem, stack, flags)
 			return true -- signal to end loop
 		end,
 		["print"] = function()
-			print(stack[top])
+			local value = stack[top]
+			if type(value) == "table" then
+				io.write("[")
+				for idx = 0, #value do
+					if idx ~= #value then
+						io.write(value[idx] .. ", ")
+					else
+						io.write(value[idx])
+					end
+				end
+				io.write("]\n")
+			else
+				print(value)
+			end
 		end,
 		["push"] = function()
 			pc = pc + 1
