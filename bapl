@@ -1,18 +1,21 @@
 #!/usr/bin/env lua
 
-local i = require "week-4.interpreter"
+local intrprtr = require "week-5.interpreter"
+local cmplr = require "week-5.compiler"
+local vm = require "week-5.vm"
+
 local utils = require "utils.core"
 
 local flags = utils.parseArgs(arg)
 
 local mem = {}
 local function exec(input, is_eval)
-	local ast = i.parse(input)
+	local ast = intrprtr.parse(input)
 
 	if ast ~= nil then
-		local code = i.compile(ast)
+		local code = cmplr.compile(ast)
 		local stack = {}
-		i.run(code, mem, stack, flags)
+		vm.exec(code, mem, stack, flags)
 		if is_eval then print(stack[1]) end
 	end
 end
