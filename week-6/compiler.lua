@@ -45,6 +45,29 @@ function Compiler:codeExp(ast)
 	elseif ast.tag == "new" then
 		self:codeExp(ast.size)
 		self:addCode("newarray")
+		if ast.eltype ~= nil then
+			-- loop counter used to fill new array
+			io.write("TESTING")
+			utils.pt(ast.size)
+			self:codeExpr(ast.size)
+			self:addCode("jmpZP")
+			self:addCode(0)
+			local l1 = self:currentPosition()
+			-- steal from FORTH -- duplicate destination array
+			-- and next index in that array at which to store
+			self:addCode("2dup")
+			-- create the next level of table which
+			-- will be used to set all the elements
+			-- of the newly created array above
+			self:codeExpr(ast.eltype)
+			self:addCode("setarray")
+			self:addCode("dec")
+			self:addCode("jmp")
+			self:addCode(l1 - self:currentPosition() - 3)
+			self:fixupJmp(l1)
+			-- cleanup loop counter and array value
+			self:addCode("pop")
+		end
 	elseif ast.tag == "unop" then
 		self:codeExp(ast.e)
 		self:addCode(ast.op.tag)
@@ -133,7 +156,7 @@ end
 
 return {
 	compile = function(ast)
-		--[[
+		--[
 		io.write("ast: ")
 		utils.pt(ast)
 		--]]

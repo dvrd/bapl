@@ -62,6 +62,22 @@ local function fold(lst)
 	return ast
 end
 
+local function foldIndex(lst)
+	local ast = lst[1]
+	for idx = 2, #lst do
+		ast = { tag = "indexed", array = ast, index = lst[idx] }
+	end
+	return ast
+end
+
+local function foldNew(lst)
+	local tree = { tag = "new", size = lst[#lst] }
+	for i = #lst - 1, 1, -1 do
+		tree = { tag = "new", size = lst[i], eltype = tree }
+	end
+	return tree
+end
+
 LAST_LINE = 0
 MAXMATCH = 0
 local space = v "space"
@@ -155,7 +171,7 @@ local op_else = (keyword "else" * block) ^ -1
 local op_elsif = (keyword "elsif" * expr * block) ^ 1 * op_else / node("if", "cond", "thn", "els")
 local op_if = keyword "if" * expr * block * (op_elsif + op_else) / node("if", "cond", "thn", "els")
 local op_while = keyword "while" * expr * block / node("while", "cond", "body")
-local op_new = keyword "new" * token "[" * expr * token "]" / node("new", "size")
+local op_new = ct(keyword "new" * (token "[" * expr * token "]") ^ 1) / foldNew
 
 local function blockToStmt(data)
 	if type(data) == "table" then
@@ -168,7 +184,7 @@ end
 return p { "base",
 	base  = space * (stmts + expr) * -1,
 	stmt  = block + op_print + op_assign + op_return + op_if + op_while,
-	lhs   = var * token "[" * expr * token "]" / node("indexed", "array", "index") + var,
+	lhs   = ct(var * (token "[" * expr * token "]") ^ 0) / foldIndex,
 	stmts = (stmt * token ";" ^ 0) * stmts ^ -1 / tonode "sequence",
 	block = token "{" * stmts ^ 0 * token "}" / blockToStmt / node("block", "st"),
 	space = (loc.space + comments) ^ 0 * p(executionTracker),

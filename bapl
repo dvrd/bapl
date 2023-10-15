@@ -14,8 +14,7 @@ local function exec(input, is_eval)
 
 	if ast ~= nil then
 		local code = cmplr.compile(ast)
-		local stack = {}
-		vm.exec(code, mem, stack, flags)
+		vm.exec(code, mem, flags)
 		if is_eval then print(stack[1]) end
 	end
 end

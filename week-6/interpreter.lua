@@ -1,9 +1,9 @@
 local inspect = require "inspect"
 local utils = require "utils.core"
-local grammar = require "week-5.grammar"
-local debug = require "week-5.debug"
-local compiler = require "week-5.compiler"
-local vm = require "week-5.vm"
+local grammar = require "week-6.grammar"
+local debug = require "week-6.debug"
+local compiler = require "week-6.compiler"
+local vm = require "week-6.vm"
 
 local M = {
 	inspect = inspect
