@@ -1,6 +1,12 @@
 local utils = require "utils.core"
 
-local Compiler = { code = {}, vars = {}, nvars = 0 }
+local Compiler = {
+	code = {},
+	functions = {},
+	vars = {},
+	nvars = 0,
+	locals = {}
+}
 
 function Compiler:addCode(op)
 	self.code[#self.code + 1] = op
@@ -14,10 +20,6 @@ function Compiler:fixJmp2here(jmp)
 	self.code[jmp] = self:currentPosition()
 end
 
-function Compiler:fixupJmp(jmp)
-	self.code[jmp] = self:getCurrentLocation() - jmp
-end
-
 function Compiler:codeJmp(op, label)
 	label = label or 0
 	self:addCode(op)
@@ -26,6 +28,10 @@ function Compiler:codeJmp(op, label)
 end
 
 function Compiler:var2num(id)
+	if self.functions[id] then
+		print("ERROR: conflict with function name")
+		os.exit(1)
+	end
 	local num = self.vars[id]
 	if not num then
 		num = self.nvars + 1
@@ -35,71 +41,75 @@ function Compiler:var2num(id)
 	return num
 end
 
-function Compiler:codeExp(ast)
+function Compiler:codeCall(ast)
+	local fn = self.functions[ast.name]
+	if not fn then error("ERROR: undefined function name") end
+	self:addCode("call")
+	self:addCode(fn.code)
+end
+
+function Compiler:codeExpr(ast)
 	if ast.tag == "number" then
 		self:addCode("push")
 		self:addCode(ast.val)
+	elseif ast.tag == "call" then
+		self:codeCall(ast)
 	elseif ast.tag == "variable" then
 		self:addCode("load")
-		self:addCode(self:var2num(ast.val))
+		local var = self:var2num(ast.val)
+		if not var then
+			print("ERROR: undeclared variable " .. ast.val)
+			os.exit(1)
+		end
+		self:addCode(var)
 	elseif ast.tag == "indexed" then
-		self:codeExp(ast.array)
-		self:codeExp(ast.index)
+		self:codeExpr(ast.array)
+		self:codeExpr(ast.index)
 		self:addCode("getarray")
 	elseif ast.tag == "new" then
-		self:codeExp(ast.size)
+		self:codeExpr(ast.size)
 		self:addCode("newarray")
 		if ast.eltype ~= nil then
-			-- loop counter used to fill new array
-			io.write("TESTING")
-			utils.pt(ast.size)
-			self:codeExp(ast.size)
+			self:codeExpr(ast.size)
 			self:addCode("jmpZP")
 			self:addCode(0)
 			local l1 = self:currentPosition()
-			-- steal from FORTH -- duplicate destination array
-			-- and next index in that array at which to store
 			self:addCode("2dup")
-			-- create the next level of table which
-			-- will be used to set all the elements
-			-- of the newly created array above
-			self:codeExp(ast.eltype)
+			self:codeExpr(ast.eltype)
 			self:addCode("setarray")
 			self:addCode("dec")
 			self:addCode("jmp")
 			self:addCode(l1 - self:currentPosition() - 3)
-			self:fixupJmp(l1)
-			-- cleanup loop counter and array value
+			self:fixJmp2here(l1)
 			self:addCode("pop")
 		end
 	elseif ast.tag == "unop" then
-		self:codeExp(ast.e)
+		self:codeExpr(ast.e)
 		self:addCode(ast.op.tag)
 	elseif ast.tag == "binop" then
 		if ast.op.tag == "and" then
-			self:codeExp(ast.e1)
+			self:codeExpr(ast.e1)
 			local jmp = self:codeJmp("jmpZP")
-			self:codeExp(ast.e2)
+			self:codeExpr(ast.e2)
 			self:fixJmp2here(jmp)
 		elseif ast.op.tag == "or" then
-			self:codeExp(ast.e1)
+			self:codeExpr(ast.e1)
 			local jmp = self:codeJmp("jmpNZP")
-			self:codeExp(ast.e2)
+			self:codeExpr(ast.e2)
 			self:fixJmp2here(jmp)
 		else
-			self:codeExp(ast.e1)
-			self:codeExp(ast.e2)
+			self:codeExpr(ast.e1)
+			self:codeExpr(ast.e2)
 			self:addCode(ast.op.tag)
 		end
-	elseif ast.tag == "assign" then
-		self:addCode("store")
-		self:addCode(ast.val)
 	else
 		if type(ast) == "table" then
-			io.write("error: invalid expression -> ")
+			io.write("ERROR: invalid expression -> ")
 			utils.pt(ast)
+			os.exit(1)
 		else
-			print("error: invalid expression -> " .. ast)
+			print("ERROR: invalid expression -> " .. ast)
+			os.exit(1)
 		end
 	end
 end
@@ -107,35 +117,48 @@ end
 function Compiler:codeAssgn(ast)
 	local lhs = ast.lhs
 	if lhs.tag == "variable" then
-		self:codeExp(ast.exp)
+		self:codeExpr(ast.exp)
 		self:addCode("store")
 		self:addCode(self:var2num(lhs.val))
 	elseif lhs.tag == "indexed" then
-		self:codeExp(lhs.array)
-		self:codeExp(lhs.index)
-		self:codeExp(ast.exp)
+		self:codeExpr(lhs.array)
+		self:codeExpr(lhs.index)
+		self:codeExpr(ast.exp)
 		self:addCode("setarray")
 	else
-		error("unknown code assignment tag")
+		print("ERROR: unknown code assignment tag")
+		os.exit(1)
 	end
+end
+
+function Compiler:codeBlock(ast)
+	self:codeStat(ast.body)
 end
 
 function Compiler:codeStat(ast)
 	if ast.tag == "assign" then
 		self:codeAssgn(ast)
+	elseif ast.tag == "local" then
+		self:codeExpr(ast.init)
+		self.locals[#(self.locals) + 1] = ast.name
+	elseif ast.tag == "call" then
+		self:codeCall(ast)
+		self:addCode("pop")
+		self:addCode(1)
 	elseif ast.tag == "sequence" then
 		self:codeStat(ast.st1)
 		self:codeStat(ast.st2)
 	elseif ast.tag == "block" then
-		if ast.st then self:codeStat(ast.st) end
+		self:codeBlock(ast)
 	elseif ast.tag == "print" then
-		self:codeExp(ast.exp)
+		self:codeExpr(ast.exp)
 		self:addCode("print")
 	elseif ast.tag == "ret" then
-		self:codeExp(ast.exp)
+		self:codeExpr(ast.exp)
 		self:addCode("ret")
+		self:addCode(#self.locals)
 	elseif ast.tag == "if" then
-		self:codeExp(ast.cond)
+		self:codeExpr(ast.cond)
 		local jmp = self:codeJmp("jmpZ")
 		self:codeStat(ast.thn)
 		if ast.els == nil then
@@ -148,29 +171,58 @@ function Compiler:codeStat(ast)
 		end
 	elseif ast.tag == "while" then
 		local label = self:currentPosition()
-		self:codeExp(ast.cond)
+		self:codeExpr(ast.cond)
 		local jmp = self:codeJmp("jmpZ")
 		self:codeStat(ast.body)
 		self:codeJmp("jmp", label)
 		self:fixJmp2here(jmp)
+	elseif ast.tag == "function" then
+		self:codeFunction(ast)
 	else
-		self:codeExp(ast)
+		self:codeExpr(ast)
 	end
+end
+
+function Compiler:codeFunction(ast)
+	local code = {}
+	if self.functions[ast.name] then
+		print("ERROR: duplicate function name")
+		os.exit(1)
+	end
+	self.functions[ast.name] = {
+		code = code
+	}
+	self.code = code
+	self:codeStat(ast.body)
+	self:addCode("push")
+	self:addCode(0)
+	self:addCode("ret")
+	self:addCode(#self.locals)
 end
 
 return {
 	compile = function(ast)
-		--[
+		---[[
 		io.write("ast: ")
 		utils.pt(ast)
 		--]]
-		Compiler:codeStat(ast)
-		Compiler:addCode("push")
-		Compiler:addCode(0)
-		Compiler:addCode("ret")
+		for i = 1, #ast do
+			if ast.tag == "function" then
+				Compiler:codeFunction(ast[i])
+			else
+				Compiler:codeStat(ast[i])
+				Compiler:addCode("push")
+				Compiler:addCode(0)
+				Compiler:addCode("ret")
+			end
+		end
 
-		local result = Compiler.code
-		Compiler.code = {}
-		return result
+		local main = Compiler.functions["main"]
+
+		if not main then
+			return Compiler.code
+		end
+
+		return main.code
 	end
 }

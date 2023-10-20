@@ -1,1 +1,10 @@
-a = new[2][2]
+fn test() {
+	return 33
+}
+
+fn main() {
+	let x = 10
+	let y = 10
+	z = test()
+	@ z
+}
